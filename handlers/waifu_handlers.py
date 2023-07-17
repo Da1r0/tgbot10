@@ -1,46 +1,40 @@
 import waifu
 from aiogram import Router
-from aiogram.filters import StateFilter, Command
-from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 from callbacks.waifu import WaifuTypeCallbackData, WaifuCategoryCallbackData
 from keyboard.inline import sfw_categories_inline_keyboard, nsfw_categories_inline_keyboard
-from states.waifu_states import WaifuTypeStatesGroup
 
 waifu_router = Router()
 
 
 @waifu_router.callback_query(WaifuTypeCallbackData.filter())
-async def handle_waifu_type(query: CallbackQuery, callback_data: WaifuTypeCallbackData, state: FSMContext):
+async def handle_waifu_type(query: CallbackQuery, callback_data: WaifuTypeCallbackData):
     if callback_data.type == 'sfw':
-        await state.set_state(WaifuTypeStatesGroup.sfw)
         await query.message.answer('Вы выбрали обычные картинки. Выберите категорию',
                                    reply_markup=sfw_categories_inline_keyboard)
-        await query.answer()
     else:
-        await state.set_state(WaifuTypeStatesGroup.nsfw)
         await query.message.answer('Вы погрязли в разврате. Выбирайте категорию',
                                    reply_markup=nsfw_categories_inline_keyboard)
-        await query.answer()
 
 
-@waifu_router.callback_query(WaifuCategoryCallbackData.filter(), StateFilter(WaifuTypeStatesGroup.sfw))
-async def handle_sfw_category(query: CallbackQuery, callback_data: WaifuCategoryCallbackData, state: FSMContext):
+@waifu_router.callback_query(WaifuCategoryCallbackData.filter())
+async def handle_sfw_category(query: CallbackQuery, callback_data: WaifuCategoryCallbackData):
     category = callback_data.category
+    waifu_type = callback_data.type
     async with waifu.WaifuAioClient() as session:
-        image = await session.sfw(category)
-    await query.message.answer_photo(image, reply_markup=sfw_categories_inline_keyboard)
+        if waifu_type == 'sfw':
+            image = await session.sfw(category)
+        else:
+            image = await session.nsfw(category)
+    if image.endswith('.gif'):
+        await query.message.answer_animation(image, reply_markup=sfw_categories_inline_keyboard)
+    else:
+        await query.message.answer_photo(image, reply_markup=sfw_categories_inline_keyboard)
 
 
-@waifu_router.callback_query(WaifuCategoryCallbackData.filter(), StateFilter(WaifuTypeStatesGroup.nsfw))
-async def handle_sfw_category(query: CallbackQuery, callback_data: WaifuCategoryCallbackData, state: FSMContext):
-    category = callback_data.category
-    async with waifu.WaifuAioClient() as session:
-        image = await session.nsfw(category)
-    await query.message.answer_photo(image, reply_markup=nsfw_categories_inline_keyboard)
-
-
+#  Написать обработчик команды /waifu {type} {category}
 @waifu_router.message(Command('waifu'))
 async def get_waifu_command(message: Message):
     words = message.text.split()[1:]
@@ -53,6 +47,9 @@ async def get_waifu_command(message: Message):
                     image = await session.sfw(waifu_category)
                 else:
                     image = await session.nsfw(waifu_category)
-            await message.answer_photo(image)
-    else:
-        await message.answer('Возможно, вы ввели недопустимый тип или категорию')
+            if image.endswith('.gif'):
+                await message.answer_animation(image, reply_markup=sfw_categories_inline_keyboard)
+            else:
+                await message.answer_photo(image, reply_markup=sfw_categories_inline_keyboard)
+        else:
+            await message.answer('Возможно вы ввели недопустимый тип или категорию')

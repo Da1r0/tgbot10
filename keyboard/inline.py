@@ -9,7 +9,7 @@ sfw_categories_inline_keyboard_builder = InlineKeyboardBuilder()
 for sfw_category in ImageCategories['sfw']:
     sfw_categories_inline_keyboard_builder.button(
         text=sfw_category,
-        callback_data=WaifuCategoryCallbackData(category=sfw_category).pack()
+        callback_data=WaifuCategoryCallbackData(category=sfw_category, type='sfw').pack()
     )
 sfw_categories_inline_keyboard = sfw_categories_inline_keyboard_builder.adjust(4).as_markup()
 
@@ -18,7 +18,7 @@ nsfw_categories_inline_keyboard_builder = InlineKeyboardBuilder()
 for nsfw_category in ImageCategories['nsfw']:
     nsfw_categories_inline_keyboard_builder.button(
         text=nsfw_category,
-        callback_data=WaifuCategoryCallbackData(category=nsfw_category).pack()
+        callback_data=WaifuCategoryCallbackData(category=nsfw_category, type='nsfw').pack()
     )
 nsfw_categories_inline_keyboard = nsfw_categories_inline_keyboard_builder.adjust(4).as_markup()
 
